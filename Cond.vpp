@@ -1,0 +1,90 @@
+class Cond
+
+instance variables
+
+  cond : Compare;
+
+operations
+
+  public Cond : Compare ==> Cond
+  Cond(c) == cond := c;
+
+types
+  public IntArray = map Var to int;
+  public BoolArray = map Var to bool;
+
+
+  public Compare :: left : FArrayLookup | ArrayLookup
+                      op : <LE>
+                   right : FArrayLookup | ArrayLookup;
+
+  public ArrayLookup :: aname : Var
+                        index : Var | UnVar;
+
+  public FArrayLookup :: aname : Var
+                        index : ArrayLookup;
+
+  public UnVar :: <requester> | <resource>;
+
+  public Var :: vname : token;
+
+  public Result = int | bool | IntArray | BoolArray | Var | <Indet>;
+
+  public Condition = Compare | FArrayLookup | ArrayLookup | Var | UnVar;
+
+
+operations
+
+  
+  public EvaluateRequest : Request * Env ==> Result
+  EvaluateRequest(r,e) == 
+  cases cond: 
+    mk_Cond`Compare(left,-,right) -> (dcl a : Result, b : Result; 
+                                        cases left: 
+                                          mk_Cond`FArrayLookup(-,-) -> (a := EvaluateFullLeft(left.aname,left.index,e,r); b := EvaluateFullRight(right.aname,right.index,e,r);), 
+                                          mk_Cond`ArrayLookup(-,-) -> (a := LeftTokens(left,e,r); b := RightTokens(right,e,r);), 
+                                          others -> return <Indet>
+                                        end;
+										return a<=b;), 
+    others -> return false
+  end;
+  
+  public EvaluateFullLeft : Var * ArrayLookup * Env * Request ==> Result
+  EvaluateFullLeft(v,a,e,r) == (dcl left : Var; left := EvaluateLeft(a,e,r);return Lookup(mk_ArrayLookup(v,left),e););
+  
+  public EvaluateFullRight : Var * ArrayLookup * Env * Request ==> Result
+  EvaluateFullRight(v,a,e,r) == (dcl right : Var; right := EvaluateRight(a,e,r);return Lookup(mk_ArrayLookup(v,right),e););
+  
+  public EvaluateLeft : ArrayLookup * Env * Request ==> Result
+  EvaluateLeft(a,e,r) == if a.aname in set dom e.GetDenv() then 
+                            if is_Env`Mix(e.GetVal(a.aname)(r.GetResource())) then return e.GetVal(a.aname)(r.GetResource()).classification
+                            else return e.GetVal(a.aname)(r.GetResource()) 
+                          else return <Indet>;
+  
+  public EvaluateRight : ArrayLookup * Env * Request ==> Result
+  EvaluateRight(a,e,r) == if a.aname in set dom e.GetDenv() then
+                            if is_Env`Mix(e.GetVal(a.aname)(r.GetSubject())) then return e.GetVal(a.aname)(r.GetSubject()).classification
+                            else return e.GetVal(a.aname)(r.GetSubject()) 
+                          else return <Indet>;
+                        
+  public LeftTokens : ArrayLookup * Env * Request==> Result
+  LeftTokens(a,e,r) == if a.aname in set dom e.GetDenv() then 
+                            if is_Env`Mix(e.GetVal(a.aname)(r.GetResource())) then return e.GetVal(a.aname)(r.GetResource()).tokens
+                            else return e.GetVal(a.aname)(r.GetResource())
+                          else return <Indet>;
+
+  public RightTokens : ArrayLookup * Env * Request==> Result
+  RightTokens(a,e,r) == if a.aname in set dom e.GetDenv() then 
+                            if is_Env`Mix(e.GetVal(a.aname)(r.GetSubject())) then return e.GetVal(a.aname)(r.GetSubject()).tokens
+                            else return (e.GetVal(a.aname)(r.GetSubject()))
+                          else return <Indet>;
+  
+  public Lookup : ArrayLookup * Env ==> Result
+  Lookup(a,e) == if a.aname in set dom e.GetDenv() then return e.GetVal(a.aname)(a.index) else return <Indet>;
+  
+
+
+
+
+
+end Cond

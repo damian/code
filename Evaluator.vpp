@@ -1,0 +1,52 @@
+class Evaluator
+
+instance variables
+
+  env : Env;
+  req : Request;
+  pol : PDP`Policy;
+  inst : Inst := mk_Inst({|->});
+
+types 
+
+  Inst :: map Cond`UnVar to Cond`Var;
+  public Effect = int | bool | <Permit> | <Deny>;
+
+values
+
+  requester : Cond`UnVar = mk_Cond`UnVar(<requester>);
+  resource : Cond`UnVar = mk_Cond`UnVar(<resource>);
+
+operations
+
+  public Evaluator : PDP`Policy * Env ==> Evaluator
+  Evaluator(p,e) == (
+    pol := p;
+    env := e;
+  );
+
+  public evaluateRequest: Request ==> Effect
+  evaluateRequest(r) == 
+    ( 
+       req := r; 
+       inst := mk_Inst({requester |-> req.GetSubject(), resource |-> req.GetResource()});
+       (dcl results : seq of Effect := [];
+       for all rule in set pol.rules do results := results ^ [evaluateRule(rule)];
+       if len results > 1 then
+          if results(1) = true then return <Permit>
+          else if results(1) = false and results(2) = true then return <Permit>
+          else return <Deny>
+      else if results(1) = true or results(1) = <Permit> then return <Permit>
+            else return <Deny>;
+    ););
+
+  public evaluateRule : PDP`Rule ==> Effect
+  evaluateRule(r) == if r.cond = nil 
+                       then return r.effect
+                     else 
+                     return (r.cond).EvaluateRequest(req,env);
+                                   
+
+
+end Evaluator
+

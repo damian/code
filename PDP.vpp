@@ -1,0 +1,30 @@
+class PDP
+
+instance variables
+
+  pdp : Policy;
+
+types
+
+
+  public Policy :: target : [Target]
+                      rules : set of Rule;
+
+  public Rule :: target : [Target]
+                   effect : Evaluator`Effect
+                   cond : [Cond];
+
+  public Target :: subjects : set of Cond`Var; --Not really needed for our scenario
+
+operations
+
+  public GetPolicy:() ==> Policy
+  GetPolicy() == return pdp;
+
+  public PDP : Policy ==> PDP
+  PDP(ps) == (
+    pdp := ps;
+  )
+
+
+end PDP

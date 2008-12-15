@@ -1,0 +1,114 @@
+class Test
+
+values
+public requester : Cond`UnVar = mk_Cond`UnVar(<requester>);
+public resource  : Cond`UnVar = mk_Cond`UnVar(<resource>);
+
+--Classifications
+public TopSecret : Cond`Var = mk_Cond`Var(mk_token("TopSecret"));
+public Secret : Cond`Var = mk_Cond`Var(mk_token("Secret"));
+public Restricted : Cond`Var = mk_Cond`Var(mk_token("Restricted"));
+public Confidential : Cond`Var = mk_Cond`Var(mk_token("Confidential"));
+
+--Agents
+public Damian : Cond`Var = mk_Cond`Var(mk_token("Damian"));
+public Rob : Cond`Var = mk_Cond`Var(mk_token("Rob"));
+public Adam : Cond`Var = mk_Cond`Var(mk_token("Adam"));
+public John : Cond`Var = mk_Cond`Var(mk_token("John"));
+
+--Agent Attributes
+--public DamianAttr : Env`Mix = mk_Env`Mix(TopSecret,20);
+--public RobAttr : Env`Mix = mk_Env`Mix(Secret,150);
+--public AdamAttr : Env`Mix = mk_Env`Mix(Restricted,100);
+--public JohnAttr : Env`Mix = mk_Env`Mix(Confidential,100);
+
+
+--Environments
+public clearanceArray : Cond`Var = mk_Cond`Var(mk_token("clearClass"));
+public docArray : Cond`Var = mk_Cond`Var(mk_token("documents"));
+public agentArray : Cond`Var = mk_Cond`Var(mk_token("agents"));
+
+
+--Documents
+public doc1 : Cond`Var = mk_Cond`Var(mk_token("Doc1"));
+public doc2 : Cond`Var = mk_Cond`Var(mk_token("Doc2"));
+public doc3 : Cond`Var = mk_Cond`Var(mk_token("Doc3"));
+public doc4 : Cond`Var = mk_Cond`Var(mk_token("Doc4"));
+
+--Document Attributes
+--public doc1Attr : Env`Mix = mk_Env`Mix(TopSecret,100);
+--public doc2Attr : Env`Mix = mk_Env`Mix(Secret,50);
+--public doc3Attr : Env`Mix = mk_Env`Mix(Restricted,50);
+--public doc4Attr : Env`Mix = mk_Env`Mix(Confidential,25);
+
+--sets of Agents and Documents
+public all_subjects : set of Cond`Var = {Damian,Rob,Adam,John};
+public all_documents : set of Cond`Var = {doc1,doc2,doc3,doc4};
+
+
+--rule 1 All permit
+all_permit : PDP`Rule = mk_PDP`Rule(nil,<Permit>,nil);
+
+--rule 2 All deny
+all_deny : PDP`Rule = mk_PDP`Rule(nil,<Deny>,nil);
+
+--rule 3 clearance/classification
+public clear_class : PDP`Rule = mk_PDP`Rule(nil,<Permit>,new Cond(mk_Cond`Compare((mk_Cond`FArrayLookup(clearanceArray,(mk_Cond`ArrayLookup(docArray,resource)))),<LE>,(mk_Cond`FArrayLookup(clearanceArray,mk_Cond`ArrayLookup(agentArray,requester))))));
+
+--rule 4 tokens
+public tokens : PDP`Rule = mk_PDP`Rule(nil,<Permit>,new Cond(mk_Cond`Compare(mk_Cond`ArrayLookup(docArray,resource),<LE>,mk_Cond`ArrayLookup(agentArray,requester))));
+
+public multilevel : set of PDP`Rule = {clear_class};
+public sor : set of PDP`Rule = {tokens};
+public permit : set of PDP`Rule = {all_permit};
+public deny : set of PDP`Rule = {all_deny};
+public hybrid : set of PDP`Rule = {clear_class,tokens};
+
+public pol : PDP`Policy = mk_PDP`Policy(nil,sor); --Nil because there aren't any targets i.e rule is applicable to everyone
+
+public pol1 : PDP`Policy = mk_PDP`Policy(nil,permit);
+public pol2 : PDP`Policy = mk_PDP`Policy(nil,deny);
+public pol3 : PDP`Policy = mk_PDP`Policy(nil,multilevel);
+public pol4 : PDP`Policy = mk_PDP`Policy(nil,hybrid);
+
+public multiEnv : Env = new Env({clearanceArray |-> {TopSecret |-> 4, Secret |-> 3, Confidential |-> 2, Restricted |-> 1}, docArray |-> {doc4 |-> TopSecret, doc3 |-> Secret, doc2 |-> Confidential, doc1 |-> Restricted},agentArray |-> {Damian |-> TopSecret, Rob |-> Secret, Adam |-> Restricted, John |-> Confidential}});
+
+public env : Env = new Env({agentArray |-> {Damian |-> 112, Rob |-> 23, Adam |-> 77, John |-> 55}, docArray |-> {doc4 |-> 23, doc3 |-> 56, doc2 |-> 3, doc1 |-> 184}});
+
+public hyEnv : Env = new Env({clearanceArray |-> {TopSecret |-> 4, Secret |-> 3, Confidential |-> 2, Restricted |-> 1}, docArray |-> {doc4 |-> mk_Env`Mix(TopSecret,100), doc3 |-> mk_Env`Mix(Secret, 50), doc2 |-> mk_Env`Mix(Confidential, 30), doc1 |-> mk_Env`Mix(Restricted, 20)},agentArray |-> {Damian |-> mk_Env`Mix(TopSecret, 100), Rob |-> mk_Env`Mix(Secret,100), Adam |-> mk_Env`Mix(Restricted,75), John |-> mk_Env`Mix(Confidential,50)}});
+
+--public hyEnv : Env = new Env({clearanceArray |-> {TopSecret |-> 4, Secret |-> 3, Confidential |-> 2, Restricted |-> 1}, docArray |-> {doc4 |-> doc4Attr, doc3 |-> doc3Attr, doc2 |-> doc2Attr, doc1 |-> doc1Attr},agentArray |-> {Damian |-> DamianAttr, Rob |-> RobAttr, Adam |-> AdamAttr, John |-> JohnAttr}});
+
+public eval : Evaluator = new Evaluator(pol,env);
+public eval1 : Evaluator = new Evaluator(pol1,env);
+public eval2 : Evaluator = new Evaluator(pol2,env);
+public eval3 : Evaluator = new Evaluator(pol3,multiEnv);
+public eval4 : Evaluator = new Evaluator(pol4, hyEnv);
+
+public pep : PEP = new PEP(env,eval);
+public pep1 : PEP = new PEP(env,eval1);
+public pep2 : PEP = new PEP(env,eval2);
+public pep3 : PEP = new PEP(multiEnv,eval3);
+public pep4 : PEP = new PEP(hyEnv,eval4);
+
+public req1 : Request = new Request(Damian,doc3,mk_token("Write"));
+public req2 : Request = new Request(Rob,doc3,mk_token("Write"));
+public req3 : Request = new Request(Adam,doc3,mk_token("Write"));
+public req4 : Request = new Request(John,doc3,mk_token("Write"));
+
+public requests : seq of Request = [req1,req2,req3,req4,req1,req1,req4,req2];
+
+
+operations
+
+public tryRequest : Request ==> Evaluator`Effect
+tryRequest(r) == return pep.makeRequest(r);
+
+public bulkRequest : () ==> seq of map Cond`Var to (map Cond`Var to Evaluator`Effect)
+bulkRequest() == (dcl results : seq of map Cond`Var to (map Cond`Var to Evaluator`Effect) := []; for req in requests do results := results ^ [{req.GetSubject() |-> {req.GetResource() |-> pep.makeRequest(req)}}]; return results;)
+
+
+
+
+
+end Test

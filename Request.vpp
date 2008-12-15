@@ -1,0 +1,27 @@
+class Request
+
+instance variables  
+
+  subject  : Cond`Var;
+  resource : Cond`Var;
+  action   : token;
+
+operations
+
+  public Request: Cond`Var * Cond`Var * token ==> Request
+  Request(s,r,a) ==
+   (subject  := s;
+    resource := r;
+    action   := a;
+  ); 
+
+  public GetSubject: () ==> Cond`Var
+  GetSubject() == return subject;
+
+  public GetResource: () ==> Cond`Var
+  GetResource() == return resource;
+
+  public GetAction: () ==> token
+  GetAction() == return action;
+
+end Request

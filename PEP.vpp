@@ -1,0 +1,51 @@
+class PEP
+
+instance variables
+
+  env : Env;
+  eval : Evaluator;
+
+operations
+
+  public PEP: Env * Evaluator ==> PEP
+  PEP(en,ev) == (
+    env := en;
+    eval := ev;
+  );
+  
+  
+  public makeRequest: Request ==> Evaluator`Effect
+  makeRequest(r) == let result = eval.evaluateRequest(r) in
+  (
+    if result = <Permit> then
+      if card env.GetDom() = 2 then let cost = env.GetVal(env.GetDocs())(r.GetResource()), budget = env.GetVal(env.GetAgents())(r.GetSubject()) in
+      (
+        env.setBalance(r.GetSubject(),budget-cost);
+        return result;
+      )
+      else if is_Env`Mix(env.GetVal(env.GetAgents())(r.GetResource())) then 
+      let 
+        cost = env.GetVal(env.getMixDocs())(r.GetResource()).tokens, 
+        clearance = env.GetVal(env.getMixAgents())(r.GetSubject()).classification, 
+        clearanceLevel = env.GetVal(env.getMixClearance())(env.GetVal(env.getMixAgents())(r.GetSubject()).classification), 
+        classificationLevel = env.GetVal(env.getMixClearance())(env.GetVal(env.getMixDocs())(r.GetResource()).classification), 
+        budget = env.GetVal(env.getMixAgents())(r.GetSubject()).tokens 
+      in
+      (
+        if clearanceLevel >= classificationLevel then return result
+        else 
+        (
+          dcl diff : int := classificationLevel-clearanceLevel;
+          if budget >= (diff*cost) then
+          (
+            env.setMixBalance(r.GetSubject(),clearance,budget-(diff*cost));
+            return result;
+          )
+          else return <Deny>
+        )
+      )
+      else return result
+    else return result
+  );
+  
+end PEP
